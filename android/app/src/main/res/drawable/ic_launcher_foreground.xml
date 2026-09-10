@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 由「脚本库\生成图标.ps1」生成：自适应图标前景层（钱包剪影，evenOdd 挖出卡槽与按扣） -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="0.66"
+        android:scaleY="0.66"
+        android:translateX="21"
+        android:translateY="21">
+        <path
+            android:fillColor="#FFFFFF"
+            android:fillType="evenOdd"
+            android:pathData="M8,34 H80 A12,12 0 0 1 92,34 V74 A12,12 0 0 1 80,86 H20 A12,12 0 0 1 8,74 V34 A12,12 0 0 1 8,34 Z M16,37 H79 A5,5 0 0 1 84,37 V37 A5,5 0 0 1 79,42 H21 A5,5 0 0 1 16,37 V37 A5,5 0 0 1 16,37 Z M68,61 H79 A9,9 0 0 1 88,61 V65 A9,9 0 0 1 79,74 H77 A9,9 0 0 1 68,65 V61 A9,9 0 0 1 68,61 Z" />
+    </group>
+</vector>
