@@ -10,6 +10,16 @@ Flutter 单代码库 → Android（正式使用）/ Web（开发调试）。**�
 | 🔌 **无需联网** | 数据**仅储存在本地**，不上传、不需要注册账号；正式包不申请联网权限 |
 | 📖 **怎么用** | 进入软件后打开 **我的 → 使用教程**，即可查看使用方法（三条记账途径怎么配合、常见问题） |
 
+<p align="center">
+  <img src="screenshots/01-home.jpg" width="230" alt="账单流水">
+  &nbsp;
+  <img src="screenshots/02-profile.jpg" width="230" alt="我的">
+  &nbsp;
+  <img src="screenshots/03-tutorial.jpg" width="230" alt="使用教程">
+  <br>
+  <sub>账单流水 · 我的 · 使用教程</sub>
+</p>
+
 ---
 
 ## 这是什么
