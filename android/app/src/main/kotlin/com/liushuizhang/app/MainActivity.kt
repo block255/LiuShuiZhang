@@ -7,10 +7,12 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.PowerManager
 import android.provider.Settings
 import android.util.Log
 import io.flutter.embedding.android.FlutterActivity
@@ -55,6 +57,36 @@ class MainActivity : FlutterActivity() {
                         .putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
                     startActivity(intent)
                     result.success(true)
+                }
+
+                // 后台运行权限（AOSP 电池优化白名单）：荣耀上 ROM 的「应用启动管理」与它
+                // 是两套独立机制，只开前者不足以让后台收到通知（2026-09-12 真机实测）
+                "isIgnoringBatteryOptimizations" -> {
+                    result.success(isIgnoringBatteryOptimizations())
+                }
+
+                "requestIgnoreBatteryOptimizations" -> {
+                    try {
+                        if (Build.VERSION.SDK_INT >= 23) {
+                            val intent = Intent(
+                                Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                                Uri.parse("package:$packageName")
+                            )
+                            startActivity(intent)
+                            result.success(true)
+                        } else {
+                            // 低版本没有电池优化概念，视为已允许
+                            result.success(false)
+                        }
+                    } catch (e: Exception) {
+                        // 部分 ROM 没有该对话框 → 退化为打开电池优化设置列表
+                        try {
+                            startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                            result.success(true)
+                        } catch (e2: Exception) {
+                            result.error("battery_intent_failed", e2.message, null)
+                        }
+                    }
                 }
 
                 "selfHealListener" -> {
@@ -371,6 +403,22 @@ class MainActivity : FlutterActivity() {
         ) ?: return false
         return enabled.split(":").any {
             it.equals(flat, ignoreCase = true) || it.equals(short, ignoreCase = true)
+        }
+    }
+
+    /**
+     * 是否已加入"电池优化白名单"（设置 → 应用 → 特殊访问权限 → 电池优化 → 不优化）。
+     * 荣耀上 ROM 的「应用启动管理」与本项是两套独立机制：只开前者时后台仍可能收不到通知
+     * （2026-09-12 真机实测：补上本项后立刻恢复）。API 23 以下无此概念 → 视为已允许。
+     */
+    private fun isIgnoringBatteryOptimizations(): Boolean {
+        if (Build.VERSION.SDK_INT < 23) return true
+        return try {
+            val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+            pm.isIgnoringBatteryOptimizations(packageName)
+        } catch (e: Exception) {
+            Log.e("LszBattery", "query failed", e)
+            false
         }
     }
 

@@ -17,7 +17,8 @@ class NotifySettingPage extends StatefulWidget {
   State<NotifySettingPage> createState() => _NotifySettingPageState();
 }
 
-class _NotifySettingPageState extends State<NotifySettingPage> {
+class _NotifySettingPageState extends State<NotifySettingPage>
+    with WidgetsBindingObserver {
   bool _enabled = true;
   bool _platformSupported = true; // Android 真机才有原生通道
 
@@ -28,10 +29,34 @@ class _NotifySettingPageState extends State<NotifySettingPage> {
   /// 方案 B：前台保活开关
   bool _keepAlive = false;
 
+  /// 后台运行权限（电池优化白名单）：null=未知 / true=已允许 / false=未允许
+  /// 未允许时部分 ROM（实测荣耀）会在后台限制本应用 → 收不到通知
+  bool? _batteryOk;
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this); // 从系统设置返回时刷新状态
     _loadState();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // 用户可能刚从系统「电池优化」对话框返回 → 重新读一次
+    if (state == AppLifecycleState.resumed) _refreshBattery();
+  }
+
+  Future<void> _refreshBattery() async {
+    try {
+      final ok = await NotifyPlatform.isIgnoringBatteryOptimizations();
+      if (mounted) setState(() => _batteryOk = ok);
+    } catch (_) {}
   }
 
   Future<void> _loadState() async {
@@ -42,11 +67,30 @@ class _NotifySettingPageState extends State<NotifySettingPage> {
         final ka = await NotifyPlatform.getKeepAlive();
         if (mounted) setState(() => _keepAlive = ka);
       } catch (_) {}
+      await _refreshBattery();
       if (enabled) {
         await _checkHealth();
       }
     } catch (_) {
       if (mounted) setState(() => _platformSupported = false);
+    }
+  }
+
+  /// 后台运行权限：未允许 → 弹系统授权框；已允许 → 只提示（不再打扰）
+  Future<void> _handleBattery() async {
+    // 先重新读一次真实状态：用户可能刚在系统里允许过（从设置返回后也会由
+    // didChangeAppLifecycleState 自动刷新；这里再兜一次，且不引入定时器）
+    await _refreshBattery();
+    if (!mounted) return;
+    if (_batteryOk == true) {
+      _snack('已允许后台运行 ✅');
+      return;
+    }
+    try {
+      await NotifyPlatform.requestIgnoreBatteryOptimizations();
+      _snack('请在系统弹窗里选择「允许」');
+    } catch (_) {
+      _snack('跳转失败（仅安卓真机可用）');
     }
   }
 
@@ -248,6 +292,21 @@ class _NotifySettingPageState extends State<NotifySettingPage> {
             },
           ),
           _actionTile(
+            key: const Key('notify_setting_battery'),
+            icon: _batteryOk == true
+                ? Icons.battery_full_outlined
+                : Icons.battery_alert_outlined,
+            iconColor:
+                _batteryOk == true ? AppColors.income : AppColors.warn,
+            title: '后台运行权限',
+            subtitle: switch (_batteryOk) {
+              true => '已允许：系统不会限制本应用后台运行 ✅',
+              false => '未允许 —— 后台可能收不到通知，点这里去允许',
+              _ => '点这里检查 / 设置（防止后台收不到通知）',
+            },
+            onTap: _handleBattery,
+          ),
+          _actionTile(
             key: const Key('notify_setting_heal'),
             icon: Icons.healing_outlined,
             title: '立即修复监听',
@@ -356,6 +415,7 @@ class _NotifySettingPageState extends State<NotifySettingPage> {
     required String title,
     required String subtitle,
     required VoidCallback onTap,
+    Color? iconColor,
   }) {
     return InkWell(
       key: key,
@@ -371,7 +431,7 @@ class _NotifySettingPageState extends State<NotifySettingPage> {
         ),
         child: Row(
           children: [
-            Icon(icon, size: 22, color: AppColors.primary),
+            Icon(icon, size: 22, color: iconColor ?? AppColors.primary),
             const SizedBox(width: 12),
             Expanded(
               child: Column(

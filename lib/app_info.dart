@@ -4,11 +4,11 @@ class AppInfo {
   AppInfo._();
 
   /// 语义版本（与 Android versionName 一致）
-  static const String version = '1.0.0';
+  static const String version = '1.0.1';
 
   /// 构建号（与 Android versionCode 一致）
-  static const int buildNumber = 1;
+  static const int buildNumber = 2;
 
   /// UI 展示用（我的页页脚）
-  static const String display = 'v1.0.0';
+  static const String display = 'v1.0.1';
 }

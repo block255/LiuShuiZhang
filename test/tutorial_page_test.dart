@@ -55,7 +55,7 @@ void main() {
 
     // 8 个分区
     expect(find.text('① 三条途径怎么配合'), findsOneWidget);
-    expect(find.text('② 第一次使用（三步）'), findsOneWidget);
+    expect(find.text('② 第一次使用（四步）'), findsOneWidget);
     expect(find.text('③ 自动监听怎么用'), findsOneWidget);
     expect(find.text('④ 导入账单'), findsOneWidget);
     expect(find.text('⑤ 手动记录与查看账单'), findsOneWidget);
@@ -87,7 +87,7 @@ void main() {
 
     expect(find.byKey(const Key('tutorial_go_notify')), findsNothing);
 
-    await tester.tap(find.text('② 第一次使用（三步）'));
+    await tester.tap(find.text('② 第一次使用（四步）'));
     await tester.pumpAndSettle();
 
     // 划掉不影响记账的新文案（2026-09-10 实测结论）

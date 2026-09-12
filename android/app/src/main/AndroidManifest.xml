@@ -71,6 +71,10 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/>
     <!-- 方案 B：开机自启 -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <!-- 后台运行权限自检：未加入"电池优化白名单"时可直接弹系统授权框。
+         荣耀上 ROM 的「应用启动管理」与本项是两套独立机制，只开前者后台仍可能收不到通知
+         （2026-09-12 真机实测：补上本项后立即恢复） -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
          https://developer.android.com/reference/android/content/Intent#ACTION_PROCESS_TEXT.

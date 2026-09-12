@@ -52,6 +52,18 @@ class NotifyPlatform {
     return v ?? '';
   }
 
+  /// 后台运行权限：是否已加入系统「电池优化白名单」。
+  /// 未加入时部分 ROM（实测荣耀）会在后台限制本应用 → 收不到通知。
+  static Future<bool> isIgnoringBatteryOptimizations() async {
+    final v =
+        await _channel.invokeMethod<bool>('isIgnoringBatteryOptimizations');
+    return v ?? false;
+  }
+
+  /// 后台运行权限：请求加入白名单（弹系统授权框，用户点一下即可）
+  static Future<void> requestIgnoreBatteryOptimizations() =>
+      _channel.invokeMethod('requestIgnoreBatteryOptimizations');
+
   /// 方案 B：设置前台保活开关（启停保活服务）
   static Future<void> setKeepAlive(bool enabled) =>
       _channel.invokeMethod('setKeepAlive', {'enabled': enabled});
