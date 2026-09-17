@@ -47,7 +47,15 @@ class NotifyListenerService : NotificationListenerService() {
         appendToQueue(targetPkg, title, text, sbn.postTime, channel, isProbe)
     }
 
-    /** B4 v2：标题放行规则（实测锚点：微信支付 title="微信支付"；支付宝 title="交易提醒"） */
+    /**
+     * B4 v2：标题放行规则（实测锚点）
+     * - 微信支付 title="微信支付"
+     * - 支付宝 title="交易提醒"
+     * - 支付宝「被扫」支付：把支付宝加入系统「支付保护」后会出现通知，
+     *   实测 title="支付成功通知"（正文：账户150****6332于09月17日12时15分成功付款62.60元）
+     * 设计：宁宽勿窄 —— 放行多了无害（Dart 解析器是第二道闸，解析不了只进"无法解析日志"），
+     *       漏放行才会真的丢账。
+     */
     private fun titleAllowed(pkg: String, title: String): Boolean {
         if (title.isBlank()) return false
         return when (pkg) {
@@ -55,7 +63,12 @@ class NotifyListenerService : NotificationListenerService() {
                 title == "微信支付" ||
                     title.contains("到账") || // 预留收款场景（样本待补）
                     title.contains("收款")
-            "com.eg.android.AlipayGphone" -> title == "交易提醒"
+            "com.eg.android.AlipayGphone" ->
+                title == "交易提醒" ||
+                    title.contains("支付成功") || // 被扫支付（支付保护）真实样本
+                    title.contains("付款成功") ||
+                    title.contains("收款") ||
+                    title.contains("到账")
             else -> false
         }
     }

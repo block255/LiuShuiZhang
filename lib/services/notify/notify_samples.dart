@@ -48,6 +48,18 @@ const List<NotifySample> notifySamples = [
     expectType: RecordType.expense,
     expectCents: 1000,
   ),
+  // ── 真实样本（2026-09-17 用户提供）：支付宝「被扫」支付 ──
+  // 背景：支付宝被扫默认不发通知；把支付宝加入系统「支付保护」后会出现此通知。
+  // 原生标题放行规则已同步放宽（title 含「支付成功」）。
+  NotifySample(
+    label: '支付宝·被扫支付（真实，支付保护）',
+    accountId: 'acc_alipay',
+    title: '支付成功通知',
+    text: '账户150****6332于09月17日12时15分成功付款62.60元',
+    expect: NotifyParseOutcome.ok,
+    expectType: RecordType.expense,
+    expectCents: 6260,
+  ),
 
   // ── 常见变体（真机后校正）──
   NotifySample(
