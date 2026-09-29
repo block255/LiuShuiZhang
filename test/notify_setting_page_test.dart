@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:bill_record_app/data/record_store.dart';
 import 'package:bill_record_app/main.dart';
+import 'package:bill_record_app/services/notify/notify_log.dart';
 
 void main() {
   const channel = MethodChannel('lsz_notify');
@@ -17,6 +18,7 @@ void main() {
 
   setUp(() {
     RecordStore.instance.clearForTest();
+    NotifyLogStore.instance.resetForTest();
     calls.clear();
     batteryOk = false;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -89,5 +91,30 @@ void main() {
     await openPage(tester);
     // 页面仍应渲染，且不出现异常
     expect(find.text('通知自动记账'), findsWidgets);
+  });
+
+  // ── 未识别通知入口（方案 C，2026-09-29）──
+  testWidgets('「未识别通知」入口：无记录时提示，有记录时显示条数并可进入', (WidgetTester tester) async {
+    await openPage(tester);
+    expect(find.byKey(const Key('notify_setting_unparsed')), findsOneWidget);
+    expect(find.textContaining('疑似收付款但没记账'), findsOneWidget);
+
+    // 追加一条未识别留痕 → 入口显示条数
+    NotifyLogStore.instance.add(NotifyLogEntry(
+      time: DateTime(2026, 9, 28, 9, 59),
+      source: 'native',
+      pkg: 'com.eg.android.AlipayGphone',
+      title: '退款提醒',
+      text: '你收到一笔1231.80元退款，点此查看账单详情！',
+      reason: '标题不含支付关键词，未自动记账',
+    ));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('1 条疑似收付款未记账'), findsOneWidget);
+
+    // 点进入 → 「未识别通知」页，能看到原文
+    await tester.tap(find.byKey(const Key('notify_setting_unparsed')));
+    await tester.pumpAndSettle();
+    expect(find.text('未识别通知'), findsWidgets);
+    expect(find.textContaining('1231.80'), findsOneWidget);
   });
 }

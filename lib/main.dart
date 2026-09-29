@@ -5,6 +5,7 @@ import 'app_theme.dart';
 import 'data/category_store.dart';
 import 'data/record_store.dart';
 import 'pages/root_shell.dart';
+import 'services/notify/notify_log.dart';
 import 'services/notify/notify_platform.dart';
 import 'services/notify/notify_queue.dart';
 import 'utils/app_log.dart';
@@ -20,6 +21,8 @@ Future<void> main() async {
   await _ensureListenerBound();
   // 方案 B：保活开关开着则拉起前台保活服务（进程常驻 → 监听绑定不断）
   await NotifyPlatform.startKeepAliveIfEnabled();
+  // 方案 C：刷新「未识别通知」留痕（安卓读原生文件；Web/桌面退化为内存日志）
+  await NotifyLogStore.instance.load();
   // 真机：补拉原生"通知暂存队列"（通知到达时 App 未运行，先落盘，此处补拉入库）
   await _drainQueueOnce();
   runApp(const LiuShuiZhangApp());

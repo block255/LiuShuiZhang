@@ -128,9 +128,9 @@ void main() {
       expect(NotifyLogStore.instance.count, 1);
     });
 
-    test('日志环形上限 30 条', () {
+    test('日志环形上限（不超过 maxEntries）', () {
       final s = sampleOf('支付宝·支付失败（应忽略）');
-      for (var i = 0; i < 40; i++) {
+      for (var i = 0; i < NotifyLogStore.maxEntries + 10; i++) {
         NotifyIngest.ingest(sampleMessage(s,
             arrival: DateTime(2026, 9, 7, 20, 0).add(Duration(minutes: i))));
       }

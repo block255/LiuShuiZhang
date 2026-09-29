@@ -60,6 +60,18 @@ const List<NotifySample> notifySamples = [
     expectType: RecordType.expense,
     expectCents: 6260,
   ),
+  // ── 真实样本（2026-09-28 用户提供）：支付宝「退款」──
+  // 背景：原生标题闸门只认「交易提醒/支付成功」，本条 title=「退款提醒」被拦下 →
+  // 2026-09-29 把闸门改为支付语义关键词表（含"退款"），并留痕到「未识别通知」。
+  NotifySample(
+    label: '支付宝·退款提醒（真实）',
+    accountId: 'acc_alipay',
+    title: '退款提醒',
+    text: '你收到一笔1231.80元退款，点此查看账单详情！',
+    expect: NotifyParseOutcome.ok,
+    expectType: RecordType.income,
+    expectCents: 123180,
+  ),
 
   // ── 常见变体（真机后校正）──
   NotifySample(

@@ -16,14 +16,17 @@ class NotifyIngest {
   static NotifyIngestResult ingest(NotifyMessage msg) {
     final parse = NotifyParser.parse(msg);
 
-    // 无法解析 / 无效：留档日志，不建档
+    // 无法解析 / 无效：留痕（App 内「未识别通知」可查看/复制），不建档
     if (parse.outcome == NotifyParseOutcome.failed ||
         parse.outcome == NotifyParseOutcome.ignored) {
       NotifyLogStore.instance.add(NotifyLogEntry(
         time: DateTime.now(),
+        source: 'parser',
+        pkg: msg.pkg,
         accountId: msg.accountId,
         title: msg.title,
         text: msg.text,
+        channel: msg.channel,
         reason: parse.reason,
       ));
       return NotifyIngestResult(

@@ -2,8 +2,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../app_theme.dart';
+import '../services/notify/notify_log.dart';
 import '../services/notify/notify_platform.dart';
 import 'notify_sim_page.dart';
+import 'unparsed_notify_page.dart';
 
 /// 通知自动记账 · 设置页（B3a）
 ///
@@ -37,13 +39,21 @@ class _NotifySettingPageState extends State<NotifySettingPage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this); // 从系统设置返回时刷新状态
+    // 「未识别通知」条数实时反映（进页面刷新一次原生留痕）
+    NotifyLogStore.instance.addListener(_onLogChanged);
+    NotifyLogStore.instance.load();
     _loadState();
   }
 
   @override
   void dispose() {
+    NotifyLogStore.instance.removeListener(_onLogChanged);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  void _onLogChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
@@ -313,6 +323,20 @@ class _NotifySettingPageState extends State<NotifySettingPage>
             subtitle: '重新绑定监听服务（收不到通知时使用）',
             onTap: _heal,
           ),
+          _actionTile(
+            key: const Key('notify_setting_unparsed'),
+            icon: Icons.report_gmailerrorred_outlined,
+            iconColor: NotifyLogStore.instance.count > 0 ? AppColors.warn : null,
+            title: '未识别通知',
+            subtitle: _unparsedSubtitle(),
+            onTap: () async {
+              await Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const UnparsedNotifyPage()),
+              );
+              // 返回后刷新条数（页面内可能已清空或复制）
+              await NotifyLogStore.instance.load();
+            },
+          ),
           if (kDebugMode) ...[
             const SizedBox(height: 20),
             const Text('调试（仅开发版可见）',
@@ -344,6 +368,13 @@ class _NotifySettingPageState extends State<NotifySettingPage>
         ],
       ),
     );
+  }
+
+  /// 「未识别通知」副标题：有记录时显示条数并提示可复制导出
+  String _unparsedSubtitle() {
+    final n = NotifyLogStore.instance.count;
+    if (n == 0) return '疑似收付款但没记账的通知会记在这里（可复制导出）';
+    return '$n 条疑似收付款未记账 —— 点开查看 / 复制导出';
   }
 
   /// 监听健康状态条（绿=正常 / 红=失联 / 橙=需授权 / 灰=检测中）

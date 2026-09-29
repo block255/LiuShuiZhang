@@ -18,7 +18,7 @@ void main() {
     drainer = NotifyQueueDrainer(dirProvider: () async => dir);
     RecordStore.replaceForTest(MemoryRecordStorage());
     await RecordStore.instance.init();
-    NotifyLogStore.instance.clear();
+    NotifyLogStore.instance.resetForTest();
   });
 
   tearDown(() async {
@@ -116,6 +116,20 @@ void main() {
       expect(r.added, 1);
       expect(RecordStore.instance.pending().records, hasLength(1));
       expect(NotifyLogStore.instance.count, 1);
+    });
+
+    test('未识别通知留痕：带来源包名与来源类型（供「未识别通知」页展示）', () async {
+      await queueFile().writeAsString(jsonEncode([
+        entry('com.eg.android.AlipayGphone',
+            title: '会员积分提醒', text: '纯文本无方向无金额'),
+      ]));
+      await drainer.drain();
+      final e = NotifyLogStore.instance.entries.single;
+      expect(e.source, 'parser');
+      expect(e.pkg, 'com.eg.android.AlipayGphone');
+      expect(e.platformName, '支付宝');
+      expect(e.sourceName, '未解析');
+      expect(e.toReportLine(), contains('未解析'));
     });
 
     test('重复 drain（队列已删）→ 第二次 0 条且不重复入库', () async {

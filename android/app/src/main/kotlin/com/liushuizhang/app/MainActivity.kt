@@ -19,6 +19,7 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import org.json.JSONArray
+import org.json.JSONObject
 import java.io.File
 
 class MainActivity : FlutterActivity() {
@@ -138,6 +139,32 @@ class MainActivity : FlutterActivity() {
                     ).getBoolean(NotifyListenerService.KEY_KEEPALIVE_ENABLED, false)
                     if (on) startKeepAliveService()
                     result.success(on)
+                }
+
+                // 方案 C「未识别通知」留痕（2026-09-29）：读 / 追加 / 清空
+                // 追加走原生（@Synchronized 单一写入者），与监听服务共用同一文件，避免竞态
+                "readUnparsedLog" -> {
+                    result.success(UnparsedLog.read(filesDir))
+                }
+
+                "appendUnparsedLog" -> {
+                    val raw = call.argument<String>("entry")
+                    if (raw.isNullOrBlank()) {
+                        result.success(false)
+                    } else {
+                        try {
+                            UnparsedLog.append(filesDir, JSONObject(raw))
+                            result.success(true)
+                        } catch (e: Exception) {
+                            Log.e("LszUnparsed", "bad entry from dart", e)
+                            result.success(false)
+                        }
+                    }
+                }
+
+                "clearUnparsedLog" -> {
+                    UnparsedLog.clear(filesDir)
+                    result.success(true)
                 }
 
                 else -> result.notImplemented()

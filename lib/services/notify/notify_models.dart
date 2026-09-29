@@ -13,11 +13,19 @@ class NotifyMessage {
   final String text; // 通知正文
   final DateTime arrival; // 通知到达时刻（即交易参考时间）
 
+  /// 来源包名（安卓真机才有；Web 模拟面板为空）——仅用于「未识别通知」留痕展示
+  final String pkg;
+
+  /// 通知渠道（安卓才有）——留痕时一并记录，便于判断是哪个渠道漏了
+  final String channel;
+
   const NotifyMessage({
     required this.accountId,
     this.title = '',
     this.text = '',
     required this.arrival,
+    this.pkg = '',
+    this.channel = '',
   });
 
   /// 判定用全文（标题在前，中间加空格）

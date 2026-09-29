@@ -39,38 +39,49 @@ class NotifyListenerService : NotificationListenerService() {
         // B4：记录通知渠道（channel），用于区分"支付类 vs 聊天/其它类"（只收支付渠道）
         val channel = sbn.notification?.channelId ?: ""
         if (title.isBlank() && text.isBlank()) return
-        // B4 v2：标题特征预过滤——微信/支付宝支付与聊天杂项共用 channel（实测），
+        // B4 v3：标题特征预过滤——微信/支付宝支付与聊天杂项共用 channel（实测），
         // 只能按标题放行支付类；聊天（群名/人名标题）直接丢弃，零唤醒。
         // 设计：宁宽勿窄 + Flutter 解析器兜底（放行多了无害，漏了才丢支付）。
         // selfTest/probe 不受此规则限制（调试链路）。
-        if (!isProbe && !selfTest && !titleAllowed(targetPkg, title)) return
+        if (!isProbe && !selfTest && !titleAllowed(targetPkg, title)) {
+            // 方案 C（2026-09-29）：疑似收付款却被闸门拦下 → 留痕，App 内「未识别通知」可见，
+            // 用户复制上报即可补规则（此前只能靠截图通知栏，漏一类就要等下次真机复现）。
+            if (UnparsedLog.looksLikePayment(title, text)) {
+                UnparsedLog.append(
+                    filesDir,
+                    UnparsedLog.nativeEntry(
+                        targetPkg, title, text, sbn.postTime, channel,
+                        "标题不含支付关键词，未自动记账"
+                    )
+                )
+            }
+            return
+        }
         appendToQueue(targetPkg, title, text, sbn.postTime, channel, isProbe)
     }
 
     /**
-     * B4 v2：标题放行规则（实测锚点）
-     * - 微信支付 title="微信支付"
-     * - 支付宝 title="交易提醒"
-     * - 支付宝「被扫」支付：把支付宝加入系统「支付保护」后会出现通知，
-     *   实测 title="支付成功通知"（正文：账户150****6332于09月17日12时15分成功付款62.60元）
-     * 设计：宁宽勿窄 —— 放行多了无害（Dart 解析器是第二道闸，解析不了只进"无法解析日志"），
-     *       漏放行才会真的丢账。
+     * B4 v3（2026-09-29）：标题放行规则 = 「支付语义关键词表」命中即放行。
+     *
+     * 为什么升级：12 天里漏了两类通知（支付宝被扫「支付成功通知」、支付宝「退款提醒」），
+     * 每漏一类都要改原生 → 打包 → 重装 → 重新授权。改成关键词表后，新标题基本
+     * 无需再动原生；真正入库仍由 Dart 解析器把关（认不出只进「未识别通知」，绝不记错账）。
+     *
+     * 实测锚点：
+     * - 微信支付 title="微信支付"（收付款统一走这个标题）
+     * - 支付宝 title="交易提醒"（支出/收入）、"支付成功通知"（被扫）、"退款提醒"（退款）
+     *
+     * 设计：宁宽勿窄 —— 放行多了无害（解析器是第二道闸），漏放行才会真的丢账。
+     * 只匹配 title：聊天/群消息的标题是人名或群名，不命中关键词 → 照旧零唤醒拦下。
      */
     private fun titleAllowed(pkg: String, title: String): Boolean {
         if (title.isBlank()) return false
-        return when (pkg) {
-            "com.tencent.mm" ->
-                title == "微信支付" ||
-                    title.contains("到账") || // 预留收款场景（样本待补）
-                    title.contains("收款")
-            "com.eg.android.AlipayGphone" ->
-                title == "交易提醒" ||
-                    title.contains("支付成功") || // 被扫支付（支付保护）真实样本
-                    title.contains("付款成功") ||
-                    title.contains("收款") ||
-                    title.contains("到账")
-            else -> false
+        val keywords = when (pkg) {
+            "com.tencent.mm" -> WECHAT_TITLE_KEYWORDS
+            "com.eg.android.AlipayGphone" -> ALIPAY_TITLE_KEYWORDS
+            else -> return false
         }
+        return keywords.any { title.contains(it) }
     }
 
     private fun isDebuggable(): Boolean =
@@ -166,6 +177,24 @@ class NotifyListenerService : NotificationListenerService() {
         private val TARGET_PACKAGES = setOf(
             "com.tencent.mm", // 微信
             "com.eg.android.AlipayGphone" // 支付宝（真机 logcat 实证包名）
+        )
+
+        /**
+         * B4 v3 微信：收付款通知统一走「微信支付」标题；其余为到账/收款/退款类
+         * （真实样本持续补充中，宁宽勿窄）。
+         */
+        private val WECHAT_TITLE_KEYWORDS = listOf(
+            "微信支付", "到账", "收款", "退款", "退回", "退还",
+            "转账", "红包", "零钱", "付款"
+        )
+
+        /**
+         * B4 v3 支付宝：标题形态多样（交易提醒 / 支付成功通知 / 退款提醒 …），
+         * 按支付语义关键词放行。解析不了的会进「未识别通知」，不会记错账。
+         */
+        private val ALIPAY_TITLE_KEYWORDS = listOf(
+            "交易", "支付", "付款", "收款", "到账", "退款", "退回", "退还",
+            "转账", "红包", "扣款", "消费", "支出", "收入", "账单", "还款", "结息"
         )
     }
 }

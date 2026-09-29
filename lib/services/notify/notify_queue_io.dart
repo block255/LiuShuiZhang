@@ -51,6 +51,7 @@ class NotifyQueueDrainer {
       if (accountId == null) continue; // 未知包名：防御跳过
       final title = (e['title'] as String?) ?? '';
       final text = (e['text'] as String?) ?? '';
+      final channel = (e['channel'] as String?) ?? '';
       final timeMs = (e['time'] as num?)?.toInt();
       final arrival = timeMs == null
           ? DateTime.now()
@@ -60,6 +61,8 @@ class NotifyQueueDrainer {
         title: title,
         text: text,
         arrival: arrival,
+        pkg: pkg ?? '',
+        channel: channel,
       ));
       if (result.outcome == NotifyIngestOutcome.pendingAdded) added++;
       // failed/ignored 已进"无法解析日志"，duplicate 已存在 → 均消费
